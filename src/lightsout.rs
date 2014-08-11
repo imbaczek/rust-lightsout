@@ -59,6 +59,9 @@ impl Level for StructLevel {
 	}
 
 	fn make_move<'a>(&'a mut self, x: uint, y: uint) -> &'a mut StructLevel {
+		if x >= self.sx || y >= self.sy {
+			return self
+		}
 		fn switch(this: &mut StructLevel, x:uint, y:uint) {
 			match this.get(x, y) {
 				Some(1) => this.set(x, y, 0),
