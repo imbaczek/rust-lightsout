@@ -121,6 +121,19 @@ fn make_ai_move(level: &mut StructLevel) {
 	};
 }
 
+fn change_level_size<T: Level>(level: T, dx: int, dy: int) -> T {
+	let (sx, sy) = level.size();
+	let sx = sx as int;
+	let sy = sy as int;
+	if sx + dx > 1 && sy + dy > 1
+			&& sx + dx < 10 && sy + dy < 10 {
+		let r:T = Level::new((sx + dx) as uint, (sy + dy) as uint);
+		r
+	} else {
+		level
+	}
+}
+
 fn main() {
 	let mut window = GameWindowSDL2::new(
 		GameWindowSettings {
@@ -155,9 +168,6 @@ fn main() {
 			Render(args) => {
 				gl.viewport(0, 0, args.width as i32, args.height as i32);
 				let c = Context::abs(args.width as f64, args.height as f64);
-				c.rgb(1.0, 0.0, 0.0)
-					.rect(0.0, 0.0, 100.0, 100.0)
-					.draw(gl);
 				clear_board(9, 9, &c, gl);
 				render_level(&level, &env, &c, gl);
 			},
@@ -176,26 +186,10 @@ fn main() {
 				println!("{:?} {:?}", args, env);
 				match args.key {
 					keyboard::Space => make_ai_move(&mut level),
-					keyboard::Left
-					| keyboard::Right 
-					| keyboard::Up
-					| keyboard::Down => {
-						let change_level_size = |dx: uint, dy: uint| {
-							let (sx, sy) = level.size();
-							if sx + dx > 1 && sy + dy > 1
-									&& sx + dx < 10 && sy + dy < 10 {
-								level = Level::new(sx + dx, sy + dy);
-								println!("new level: {}", level);
-							}
-						};
-						match args.key {
-							keyboard::Up => change_level_size(0, -1),
-							keyboard::Right => change_level_size(1, 0),
-							keyboard::Down => change_level_size(0, 1),
-							keyboard::Left => change_level_size(-1, 0),
-							_ => {},
-						};
-					},
+					keyboard::Up => level = change_level_size(level, 0, -1),
+					keyboard::Right => level = change_level_size(level, 1, 0),
+					keyboard::Down => level = change_level_size(level, 0, 1),
+					keyboard::Left => level = change_level_size(level, -1, 0),
 					keyboard::D1 => match mouse_to_level(&level, env.mousex, env.mousey) {
 						Some((x, y)) => { level.set(x, y, 0); },
 						_ => {},
