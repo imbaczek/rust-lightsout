@@ -196,6 +196,14 @@ fn main() {
 							_ => {},
 						};
 					},
+					keyboard::D1 => match mouse_to_level(&level, env.mousex, env.mousey) {
+						Some((x, y)) => { level.set(x, y, 0); },
+						_ => {},
+					},
+					keyboard::D2 => match mouse_to_level(&level, env.mousex, env.mousey) {
+						Some((x, y)) => { level.set(x, y, 1); },
+						_ => {},
+					},
 					_ => {}
 				}
 			},
