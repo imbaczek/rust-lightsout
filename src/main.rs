@@ -48,7 +48,7 @@ struct Env {
 
 #[inline(always)]
 fn pt_in_rect(px:f64, py:f64, rx: f64, ry:f64, w:f64, h:f64) -> bool {
-	px >= rx && px <= rx+h && py >= ry && py <= ry + h
+	px >= rx && px <= rx + w && py >= ry && py <= ry + h
 }
 
 fn clear_board(sx: uint, sy: uint, c: &Context, gl: &mut Gl) {
