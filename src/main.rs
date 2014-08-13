@@ -9,14 +9,18 @@ extern crate sdl2_game_window;
 use std::os;
 
 use graphics::*;
-use opengl_graphics::Gl;
+use opengl_graphics::{Gl, Texture};
 use piston::*;
 use sdl2_game_window::GameWindowSDL2;
 
 
 use lightsout::{StructLevel, Level};
+use number_renderer::NumberRenderer;
+use game::Game;
 
 mod lightsout;
+mod number_renderer;
+mod game;
 
 
 fn cmd_main() {
@@ -45,6 +49,8 @@ struct Env {
 	window_width: f64,
 	window_height: f64,
 }
+
+
 
 #[inline(always)]
 fn pt_in_rect(px:f64, py:f64, rx: f64, ry:f64, w:f64, h:f64) -> bool {
@@ -94,7 +100,6 @@ fn mouse_to_level(level: &Level, mx: f64, my: f64) -> Option<(uint, uint)> {
 
 	let lx = (mx - margin) / (margin + w);
 	let ly = (my - margin) / (margin + h);
-	println!("lx={} ly={}", lx, ly);
 	let ulx = lx as uint;
 	let uly = ly as uint;
 	let sx = margin + (margin + w) * (ulx as f64);
@@ -106,33 +111,43 @@ fn mouse_to_level(level: &Level, mx: f64, my: f64) -> Option<(uint, uint)> {
 	}
 }
 
-fn make_ai_move(level: &mut StructLevel) {
-	let sol = lightsout::solve(level);
-	println!("solution: {}", sol);
-	match sol {
-		Some(moves) => {
-			if moves.len() > 0 {
-				let move = moves[0];
-				let (mx, my) = move;
-				level.make_move(mx, my);
-			}
-		},
-		None => {}
-	};
+fn render_score(score: int, bg: &Texture, nr: &NumberRenderer, c: &Context, gl: &mut Gl) {
+	c.rect(800.0-160.0, 0.0, 160.0, 600.0)
+		.image(bg)
+		.draw(gl);
+	nr.render(score as u32, 715.0, 100.0, 170.0, [1.0, 1.0, 1.0], c, gl);
 }
 
-fn change_level_size<T: Level>(level: T, dx: int, dy: int) -> T {
-	let (sx, sy) = level.size();
-	let sx = sx as int;
-	let sy = sy as int;
-	if sx + dx > 1 && sy + dy > 1
-			&& sx + dx < 10 && sy + dy < 10 {
-		let r:T = Level::new((sx + dx) as uint, (sy + dy) as uint);
-		r
-	} else {
-		level
+fn win_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, game: &Game, assets: &AssetStore, gl: &mut Gl) {
+	let win = Texture::from_path(&assets.path("win.png").unwrap()).unwrap();
+	let bg = Texture::from_path(&assets.path("bg.png").unwrap()).unwrap();
+	let nr = NumberRenderer::new(assets);
+	let mut t = 0.0f64;
+
+	for event in *gameiter {
+		match event {
+			Render(args) => {
+				let c = Context::abs(args.width as f64, args.height as f64);
+				c.rect(200.0, 175.0, 400.0, 250.0)
+					.image(&win)
+					.draw(gl);
+				nr.render(game.score as u32, 400.0, 350.0, 200.0, [1.0, 1.0, 1.0], &c, gl);
+				render_score(game.score, &bg, &nr, &c, gl);
+			},
+			Update(args) => {
+				t += args.dt;
+			},
+			MousePress(_)
+			| KeyPress(_) => {
+				if t > 0.6 {
+					return;
+				}
+			},
+			_ => {},
+		}
 	}
 }
+
 
 fn main() {
 	let mut window = GameWindowSDL2::new(
@@ -146,12 +161,11 @@ fn main() {
 	println!("window: {:?}", window);
 
 	let game_iter_settings = GameIteratorSettings {
-		updates_per_second: 120,
+		updates_per_second: 30,
 		max_frames_per_second: 60,
 	};
 
 	let ref mut gl = Gl::new();
-	let mut level:StructLevel = Level::new(5, 5);
 
 	let mut env = Env {
 		mousex: 0f64,
@@ -160,16 +174,30 @@ fn main() {
 		window_height: window.get_settings().size[1] as f64,
 	};
 
+	let assets = AssetStore::from_folder("../bin/assets");
+	let nr = NumberRenderer::new(&assets);
+	let bg = Texture::from_path(&assets.path("bg.png").unwrap()).unwrap();
 
-	level.make_move(2, 2);
+	let mut game = Game::new(2u, 2u);
+	let mut gameiter = GameIterator::new(&mut window, &game_iter_settings);
 
-	for event in GameIterator::new(&mut window, &game_iter_settings) {
+	for event in gameiter {
 		match event {
 			Render(args) => {
 				gl.viewport(0, 0, args.width as i32, args.height as i32);
 				let c = Context::abs(args.width as f64, args.height as f64);
 				clear_board(9, 9, &c, gl);
-				render_level(&level, &env, &c, gl);
+				render_level(&game.level, &env, &c, gl);
+				render_score(game.score, &bg, &nr, &c, gl);
+			},
+			Update(args) => {
+				game.update(args.dt);
+				if game.level.is_solved() {
+					win_screen(&mut gameiter, &game, &assets, gl);
+					if !game.change_level_size(1, 1) {
+						game.restart(2, 2);
+					}
+				}
 			},
 			MouseMove(args) => {
 				env.mousex = args.x;
@@ -177,25 +205,25 @@ fn main() {
 			},
 			MousePress(args) => {
 				println!("{:?} {:?}", args, env);
-				match mouse_to_level(&level, env.mousex, env.mousey) {
-					Some((x, y)) => { level.make_move(x, y); },
+				match mouse_to_level(&game.level, env.mousex, env.mousey) {
+					Some((x, y)) => { game.level.make_move(x, y); game.add_score(-1); },
 					_ => {}
 				}
 			},
 			KeyPress(args) => {
 				println!("{:?} {:?}", args, env);
 				match args.key {
-					keyboard::Space => make_ai_move(&mut level),
-					keyboard::Up => level = change_level_size(level, 0, -1),
-					keyboard::Right => level = change_level_size(level, 1, 0),
-					keyboard::Down => level = change_level_size(level, 0, 1),
-					keyboard::Left => level = change_level_size(level, -1, 0),
-					keyboard::D1 => match mouse_to_level(&level, env.mousex, env.mousey) {
-						Some((x, y)) => { level.set(x, y, 0); },
+					keyboard::Space => { game.make_ai_move(); game.add_score(-3); },
+					keyboard::Up => { game.change_level_size(0, -1); },
+					keyboard::Right => { game.change_level_size(1, 0); },
+					keyboard::Down => { game.change_level_size(0, 1); },
+					keyboard::Left => { game.change_level_size(-1, 0); },
+					keyboard::D1 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
+						Some((x, y)) => { game.level.set(x, y, 0); },
 						_ => {},
 					},
-					keyboard::D2 => match mouse_to_level(&level, env.mousex, env.mousey) {
-						Some((x, y)) => { level.set(x, y, 1); },
+					keyboard::D2 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
+						Some((x, y)) => { game.level.set(x, y, 1); },
 						_ => {},
 					},
 					_ => {}
