@@ -148,6 +148,31 @@ fn win_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, game: &Game, assets
 	}
 }
 
+fn start_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, assets: &AssetStore, gl: &mut Gl) {
+	let msg = Texture::from_path(&assets.path("start.png").unwrap()).unwrap();
+	let mut t = 0.0f64;
+
+	for event in *gameiter {
+		match event {
+			Render(args) => {
+				let c = Context::abs(args.width as f64, args.height as f64);
+				c.rect(200.0, 175.0, 400.0, 250.0)
+					.image(&msg)
+					.draw(gl);
+			},
+			Update(args) => {
+				t += args.dt;
+			},
+			MousePress(_)
+			| KeyPress(_) => {
+				if t > 1.0 {
+					return;
+				}
+			},
+			_ => {},
+		}
+	}
+}
 
 fn main() {
 	let mut window = GameWindowSDL2::new(
@@ -180,6 +205,8 @@ fn main() {
 
 	let mut game = Game::new(2u, 2u);
 	let mut gameiter = GameIterator::new(&mut window, &game_iter_settings);
+
+	start_screen(&mut gameiter, &assets, gl);
 
 	for event in gameiter {
 		match event {
