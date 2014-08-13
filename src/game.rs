@@ -34,10 +34,10 @@ impl Game {
 		self.time += dt;
 	}
 
-	pub fn restart(&mut self, sx: uint, sy: uint) -> bool {
+	pub fn restart(&mut self, sx: uint, sy: uint, score: bool) -> bool {
 		if sx > 1 && sy> 1 && sx < 10 && sy < 10 {
 			self.level = Level::new(sx, sy);
-			self.score = Game::init_score(sx, sy) + self.score;
+			self.score = if score { Game::init_score(sx, sy) } else { 0 } + self.score;
 			self.time = 0.0;
 			return true
 		}
@@ -59,10 +59,10 @@ impl Game {
 		};
 	}
 
-	pub fn change_level_size(&mut self, dx: int, dy: int) -> bool {
+	pub fn change_level_size(&mut self, dx: int, dy: int, score: bool) -> bool {
 		let (sx, sy) = self.level.size();
 		let sx = (sx as int + dx) as uint;
 		let sy = (sy as int + dy) as uint;
-		self.restart(sx, sy)
+		self.restart(sx, sy, score)
 	}
 }

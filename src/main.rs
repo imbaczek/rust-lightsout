@@ -221,8 +221,8 @@ fn main() {
 				game.update(args.dt);
 				if game.level.is_solved() {
 					win_screen(&mut gameiter, &game, &assets, gl);
-					if !game.change_level_size(1, 1) {
-						game.restart(2, 2);
+					if !game.change_level_size(1, 1, true) {
+						game.restart(2, 2, true);
 					}
 				}
 			},
@@ -241,10 +241,10 @@ fn main() {
 				println!("{:?} {:?}", args, env);
 				match args.key {
 					keyboard::Space => { game.make_ai_move(); game.add_score(-3); },
-					keyboard::Up => { game.change_level_size(0, -1); },
-					keyboard::Right => { game.change_level_size(1, 0); },
-					keyboard::Down => { game.change_level_size(0, 1); },
-					keyboard::Left => { game.change_level_size(-1, 0); },
+					keyboard::Up => { game.change_level_size(0, -1, false); game.add_score(-50); },
+					keyboard::Right => { game.change_level_size(1, 0, false); game.add_score(-50); },
+					keyboard::Down => { game.change_level_size(0, 1, false); game.add_score(-50); },
+					keyboard::Left => { game.change_level_size(-1, 0, false); game.add_score(-50); },
 					keyboard::D1 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
 						Some((x, y)) => { game.level.set(x, y, 0); },
 						_ => {},
