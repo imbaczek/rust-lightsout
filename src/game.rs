@@ -8,6 +8,7 @@ pub struct Game {
 	pub level: StructLevel,
 	pub score: int,
 	time: f64,
+	had_tick: bool,
 }
 
 impl Game {
@@ -16,6 +17,7 @@ impl Game {
 			score: Game::init_score(sx, sy),
 			time: 0.0,
 			level: Level::new(sx, sy),
+			had_tick: false,
 		}
 	}
 
@@ -28,10 +30,16 @@ impl Game {
 	}
 
 	pub fn update(&mut self, dt: f64) {
+		self.had_tick = false;
 		if self.time % 1.0 > (self.time + dt) % 1.0 {
 			self.add_score(-1);
+			self.had_tick = true;
 		}
 		self.time += dt;
+	}
+
+	pub fn ticked(&self) -> bool {
+		self.had_tick
 	}
 
 	pub fn restart(&mut self, sx: uint, sy: uint, score: bool) -> bool {

@@ -4,7 +4,9 @@ extern crate debug;
 extern crate graphics;
 extern crate piston;
 extern crate opengl_graphics;
+extern crate sdl2;
 extern crate sdl2_game_window;
+extern crate sdl2_mixer;
 
 use std::os;
 
@@ -114,7 +116,11 @@ fn win_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, game: &Game, assets
 	let win = Texture::from_path(&assets.path("win.png").unwrap()).unwrap();
 	let bg = Texture::from_path(&assets.path("bg.png").unwrap()).unwrap();
 	let nr = NumberRenderer::new(assets);
+	let snd_win = sdl2_mixer::Chunk::from_file(&assets.path("win.ogg").unwrap()).unwrap();
+	let channel_all = sdl2_mixer::Channel::all();
 	let mut t = 0.0f64;
+
+	channel_all.play(&snd_win, 0);
 
 	for event in *gameiter {
 		match event {
@@ -168,6 +174,22 @@ fn start_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, assets: &AssetSto
 	}
 }
 
+
+fn init_audio() {
+	// use directsound if possible. xaudio2 doesn't work for some reason.
+	for i in range(0, sdl2::audio::get_num_audio_drivers()) {
+		if "directsound" == sdl2::audio::get_audio_driver(i).as_slice() {
+			sdl2::audio::audio_init("directsound").unwrap();
+			break;
+		}
+	}
+	println!("audio: {}", sdl2::audio::get_current_audio_driver());
+	println!("inited => {}", sdl2_mixer::init(sdl2_mixer::InitMp3 | sdl2_mixer::InitOgg).bits());
+	// TODO: 0x8010 is SDL_audio flag
+	sdl2_mixer::open_audio(sdl2_mixer::DEFAULT_FREQUENCY, 0x8010u16, 2, 1024).unwrap();
+	sdl2_mixer::allocate_channels(2);
+}
+
 fn main() {
 	let mut window = GameWindowSDL2::new(
 		GameWindowSettings {
@@ -193,9 +215,16 @@ fn main() {
 		window_height: window.get_settings().size[1] as f64,
 	};
 
+	init_audio();
+
 	let assets = AssetStore::from_folder("../bin/assets");
 	let nr = NumberRenderer::new(&assets);
 	let bg = Texture::from_path(&assets.path("bg.png").unwrap()).unwrap();
+
+	let snd_click = sdl2_mixer::Chunk::from_file(&assets.path("click.ogg").unwrap()).unwrap();
+	let snd_ai = sdl2_mixer::Chunk::from_file(&assets.path("ai.ogg").unwrap()).unwrap();
+	let snd_tick = sdl2_mixer::Chunk::from_file(&assets.path("tick.ogg").unwrap()).unwrap();
+	let channel_all = sdl2_mixer::Channel::all();
 
 	let mut game = Game::new(2u, 2u);
 	let mut gameiter = GameIterator::new(&mut window, &game_iter_settings);
@@ -213,6 +242,10 @@ fn main() {
 			},
 			Update(args) => {
 				game.update(args.dt);
+				if game.ticked() {
+					channel_all.play(&snd_tick, 0);
+				}
+
 				if game.level.is_solved() {
 					win_screen(&mut gameiter, &game, &assets, gl);
 					if !game.change_level_size(1, 1, true) {
@@ -227,14 +260,22 @@ fn main() {
 			MousePress(args) => {
 				println!("{:?} {:?}", args, env);
 				match mouse_to_level(&game.level, env.mousex, env.mousey) {
-					Some((x, y)) => { game.level.make_move(x, y); game.add_score(-1); },
+					Some((x, y)) => {
+						game.level.make_move(x, y);
+						game.add_score(-1);
+						channel_all.play(&snd_click, 0);
+					},
 					_ => {}
 				}
 			},
 			KeyPress(args) => {
 				println!("{:?} {:?}", args, env);
 				match args.key {
-					keyboard::Space => { game.make_ai_move(); game.add_score(-3); },
+					keyboard::Space => {
+						game.make_ai_move();
+						game.add_score(-3);
+						channel_all.play(&snd_ai, 0);
+					},
 					keyboard::Up => { game.change_level_size(0, -1, false); game.add_score(-50); },
 					keyboard::Right => { game.change_level_size(1, 0, false); game.add_score(-50); },
 					keyboard::Down => { game.change_level_size(0, 1, false); game.add_score(-50); },

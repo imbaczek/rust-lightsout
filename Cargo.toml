@@ -26,3 +26,7 @@ git = "https://github.com/pistondevelopers/sdl2_game_window"
 [dependencies.opengl_graphics]
 
 git = "https://github.com/pistondevelopers/opengl_graphics"
+
+[dependencies.rust-sdl2_mixer]
+
+git = "https://github.com/andelf/rust-sdl2_mixer.git"
