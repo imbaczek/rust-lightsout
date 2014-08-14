@@ -57,14 +57,6 @@ fn pt_in_rect(px:f64, py:f64, rx: f64, ry:f64, w:f64, h:f64) -> bool {
 	px >= rx && px <= rx + w && py >= ry && py <= ry + h
 }
 
-fn clear_board(sx: uint, sy: uint, c: &Context, gl: &mut Gl) {
-	let margin = 10.0;
-	let w = 60.0;
-	let h = 50.0;
-	c.rect(0.0, 0.0, margin + (margin + w) * (sx as f64) + 1.0, margin + (margin + h) * (sy as f64) + 1.0)
-		.rgb(0.0, 0.0, 0.0).draw(gl);
-}
-
 fn render_level(level: &Level, env: &Env, c: &Context, gl: &mut Gl) {
 	let (sx, sy) = level.size();
 	let margin = 10.0;
@@ -128,6 +120,7 @@ fn win_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, game: &Game, assets
 		match event {
 			Render(args) => {
 				let c = Context::abs(args.width as f64, args.height as f64);
+				c.rgb(0.0, 0.0, 0.0).draw(gl);
 				c.rect(200.0, 175.0, 400.0, 250.0)
 					.image(&win)
 					.draw(gl);
@@ -156,6 +149,7 @@ fn start_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, assets: &AssetSto
 		match event {
 			Render(args) => {
 				let c = Context::abs(args.width as f64, args.height as f64);
+				c.rgb(0.0, 0.0, 0.0).draw(gl);
 				c.rect(200.0, 175.0, 400.0, 250.0)
 					.image(&msg)
 					.draw(gl);
@@ -213,7 +207,7 @@ fn main() {
 			Render(args) => {
 				gl.viewport(0, 0, args.width as i32, args.height as i32);
 				let c = Context::abs(args.width as f64, args.height as f64);
-				clear_board(9, 9, &c, gl);
+				c.rgb(0.0, 0.0, 0.0).draw(gl);
 				render_level(&game.level, &env, &c, gl);
 				render_score(game.score, &bg, &nr, &c, gl);
 			},
