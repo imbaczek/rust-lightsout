@@ -1,7 +1,6 @@
 #![feature(globs)]
 extern crate debug;
 
-extern crate graphics;
 extern crate piston;
 extern crate opengl_graphics;
 extern crate sdl2;
@@ -10,10 +9,11 @@ extern crate sdl2_mixer;
 
 use std::os;
 
-use graphics::*;
+use piston::graphics::*;
+use piston::input::*;
 use opengl_graphics::{Gl, Texture};
 use piston::*;
-use sdl2_game_window::GameWindowSDL2;
+use sdl2_game_window::WindowSDL2;
 
 
 use lightsout::{StructLevel, Level};
@@ -23,6 +23,9 @@ use game::Game;
 mod lightsout;
 mod number_renderer;
 mod game;
+
+
+struct ScreenFn(fn(event: &Event, game: &mut Game, env: &mut Env, assets: &AssetStore, gl: &mut Gl) -> ScreenFn);
 
 
 fn cmd_main() {
@@ -112,42 +115,38 @@ fn render_score(score: int, bg: &Texture, nr: &NumberRenderer, c: &Context, gl: 
 	nr.render(score as u32, 715.0, 100.0, 170.0, [1.0, 1.0, 1.0], c, gl);
 }
 
-fn win_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, game: &Game, assets: &AssetStore, gl: &mut Gl) {
+
+fn win_screen(event: &Event, game: &mut Game, env: &mut Env, assets: &AssetStore, gl: &mut Gl) -> ScreenFn {
 	let win = Texture::from_path(&assets.path("win.png").unwrap()).unwrap();
 	let bg = Texture::from_path(&assets.path("bg.png").unwrap()).unwrap();
 	let nr = NumberRenderer::new(assets);
-	let snd_win = sdl2_mixer::Chunk::from_file(&assets.path("win.ogg").unwrap()).unwrap();
-	let channel_all = sdl2_mixer::Channel::all();
 	let mut t = 0.0f64;
 
-	channel_all.play(&snd_win, 0);
-
-	for event in *gameiter {
-		match event {
-			Render(args) => {
-				let c = Context::abs(args.width as f64, args.height as f64);
-				c.rgb(0.0, 0.0, 0.0).draw(gl);
-				c.rect(200.0, 175.0, 400.0, 250.0)
-					.image(&win)
-					.draw(gl);
-				nr.render(game.score as u32, 400.0, 350.0, 200.0, [1.0, 1.0, 1.0], &c, gl);
-				render_score(game.score, &bg, &nr, &c, gl);
-			},
-			Update(args) => {
-				t += args.dt;
-			},
-			MousePress(_)
-			| KeyPress(_) => {
-				if t > 0.6 {
-					return;
-				}
-			},
-			_ => {},
-		}
+	match *event {
+		Render(args) => {
+			let c = Context::abs(args.width as f64, args.height as f64);
+			c.rgb(0.0, 0.0, 0.0).draw(gl);
+			c.rect(200.0, 175.0, 400.0, 250.0)
+				.image(&win)
+				.draw(gl);
+			nr.render(game.score as u32, 400.0, 350.0, 200.0, [1.0, 1.0, 1.0], &c, gl);
+			render_score(game.score, &bg, &nr, &c, gl);
+		},
+		Update(args) => {
+			t += args.dt;
+		},
+		Input(Press(_)) => {
+			if t > 0.6 {
+				return ScreenFn(game_screen);
+			}
+		},
+		_ => {},
 	}
+	ScreenFn(win_screen)
 }
 
-fn start_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, assets: &AssetStore, gl: &mut Gl) {
+
+fn start_screen<T: Window>(gameiter: &mut EventIterator<T>, assets: &AssetStore, gl: &mut Gl) {
 	let msg = Texture::from_path(&assets.path("start.png").unwrap()).unwrap();
 	let mut t = 0.0f64;
 
@@ -163,8 +162,7 @@ fn start_screen<T: GameWindow>(gameiter: &mut GameIterator<T>, assets: &AssetSto
 			Update(args) => {
 				t += args.dt;
 			},
-			MousePress(_)
-			| KeyPress(_) => {
+			Input(Press(_)) => {
 				if t > 1.0 {
 					return;
 				}
@@ -190,23 +188,104 @@ fn init_audio() {
 	sdl2_mixer::allocate_channels(2);
 }
 
+
+fn game_screen(event: &Event, game: &mut Game, env: &mut Env, assets: &AssetStore, gl: &mut Gl) -> ScreenFn {
+	let nr = NumberRenderer::new(assets);
+	let bg = Texture::from_path(&assets.path("bg.png").unwrap()).unwrap();
+
+	let snd_click = sdl2_mixer::Chunk::from_file(&assets.path("click.ogg").unwrap()).unwrap();
+	let snd_ai = sdl2_mixer::Chunk::from_file(&assets.path("ai.ogg").unwrap()).unwrap();
+	let snd_tick = sdl2_mixer::Chunk::from_file(&assets.path("tick.ogg").unwrap()).unwrap();
+	let channel_all = sdl2_mixer::Channel::all();
+
+	match *event {
+		Render(args) => {
+			gl.viewport(0, 0, args.width as i32, args.height as i32);
+			let c = Context::abs(args.width as f64, args.height as f64);
+			c.rgb(0.0, 0.0, 0.0).draw(gl);
+			render_level(&game.level, env, &c, gl);
+			render_score(game.score, &bg, &nr, &c, gl);
+		},
+		Update(args) => {
+			game.update(args.dt);
+			if game.ticked() {
+				channel_all.play(&snd_tick, 0);
+			}
+
+			if game.level.is_solved() {
+				// let snd_win = sdl2_mixer::Chunk::from_file(&assets.path("win.ogg").unwrap()).unwrap();
+				// let channel_all = sdl2_mixer::Channel::all();
+				// channel_all.play(&snd_win, 0);
+
+				// win_screen(event, &game, &assets, gl);
+
+				if !game.change_level_size(1, 1, true) {
+					game.restart(2, 2, true);
+				}
+			}
+		},
+		Input(Move(MouseCursor(x, y))) => {
+			env.mousex = x;
+			env.mousey = y;
+		},
+		Input(Press(Mouse(args))) => {
+			println!("{:?} {:?}", args, env);
+			match mouse_to_level(&game.level, env.mousex, env.mousey) {
+				Some((x, y)) => {
+					game.level.make_move(x, y);
+					game.add_score(-1);
+					channel_all.play(&snd_click, 0);
+				},
+				_ => {}
+			}
+		},
+		Input(Press(Keyboard(key))) => {
+			println!("{:?} {:?}", key, env);
+			match key {
+				keyboard::Space => {
+					game.make_ai_move();
+					game.add_score(-3);
+					channel_all.play(&snd_ai, 0);
+				},
+				keyboard::Up => { game.change_level_size(0, -1, false); game.add_score(-50); },
+				keyboard::Right => { game.change_level_size(1, 0, false); game.add_score(-50); },
+				keyboard::Down => { game.change_level_size(0, 1, false); game.add_score(-50); },
+				keyboard::Left => { game.change_level_size(-1, 0, false); game.add_score(-50); },
+				keyboard::D1 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
+					Some((x, y)) => { game.level.set(x, y, 0); },
+					_ => {},
+				},
+				keyboard::D2 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
+					Some((x, y)) => { game.level.set(x, y, 1); },
+					_ => {},
+				},
+				_ => {}
+			}
+		},
+		_ => {}
+	}
+	ScreenFn(game_screen)
+}
+
 fn main() {
-	let mut window = GameWindowSDL2::new(
-		GameWindowSettings {
+	let mut window = WindowSDL2::new(
+		shader_version::opengl::OpenGL_3_2,
+		WindowSettings {
 			title: "Rust Lights Out".to_string(),
 			size: [800u32, 600u32],
 			fullscreen: false,
 			exit_on_esc: true,
+			samples: 4,
 		}
 	);
 	println!("window: {:?}", window);
 
-	let game_iter_settings = GameIteratorSettings {
+	let game_iter_settings = EventSettings {
 		updates_per_second: 30,
 		max_frames_per_second: 60,
 	};
 
-	let ref mut gl = Gl::new();
+	let ref mut gl = Gl::new(shader_version::opengl::OpenGL_3_2);
 
 	let mut env = Env {
 		mousex: 0f64,
@@ -218,80 +297,16 @@ fn main() {
 	init_audio();
 
 	let assets = AssetStore::from_folder("../bin/assets");
-	let nr = NumberRenderer::new(&assets);
-	let bg = Texture::from_path(&assets.path("bg.png").unwrap()).unwrap();
-
-	let snd_click = sdl2_mixer::Chunk::from_file(&assets.path("click.ogg").unwrap()).unwrap();
-	let snd_ai = sdl2_mixer::Chunk::from_file(&assets.path("ai.ogg").unwrap()).unwrap();
-	let snd_tick = sdl2_mixer::Chunk::from_file(&assets.path("tick.ogg").unwrap()).unwrap();
-	let channel_all = sdl2_mixer::Channel::all();
 
 	let mut game = Game::new(2u, 2u);
-	let mut gameiter = GameIterator::new(&mut window, &game_iter_settings);
+	let mut gameiter = EventIterator::new(&mut window, &game_iter_settings);
 
 	start_screen(&mut gameiter, &assets, gl);
 
-	for event in gameiter {
-		match event {
-			Render(args) => {
-				gl.viewport(0, 0, args.width as i32, args.height as i32);
-				let c = Context::abs(args.width as f64, args.height as f64);
-				c.rgb(0.0, 0.0, 0.0).draw(gl);
-				render_level(&game.level, &env, &c, gl);
-				render_score(game.score, &bg, &nr, &c, gl);
-			},
-			Update(args) => {
-				game.update(args.dt);
-				if game.ticked() {
-					channel_all.play(&snd_tick, 0);
-				}
+	let mut current_handler:ScreenFn = ScreenFn(game_screen);
 
-				if game.level.is_solved() {
-					win_screen(&mut gameiter, &game, &assets, gl);
-					if !game.change_level_size(1, 1, true) {
-						game.restart(2, 2, true);
-					}
-				}
-			},
-			MouseMove(args) => {
-				env.mousex = args.x;
-				env.mousey = args.y;
-			},
-			MousePress(args) => {
-				println!("{:?} {:?}", args, env);
-				match mouse_to_level(&game.level, env.mousex, env.mousey) {
-					Some((x, y)) => {
-						game.level.make_move(x, y);
-						game.add_score(-1);
-						channel_all.play(&snd_click, 0);
-					},
-					_ => {}
-				}
-			},
-			KeyPress(args) => {
-				println!("{:?} {:?}", args, env);
-				match args.key {
-					keyboard::Space => {
-						game.make_ai_move();
-						game.add_score(-3);
-						channel_all.play(&snd_ai, 0);
-					},
-					keyboard::Up => { game.change_level_size(0, -1, false); game.add_score(-50); },
-					keyboard::Right => { game.change_level_size(1, 0, false); game.add_score(-50); },
-					keyboard::Down => { game.change_level_size(0, 1, false); game.add_score(-50); },
-					keyboard::Left => { game.change_level_size(-1, 0, false); game.add_score(-50); },
-					keyboard::D1 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
-						Some((x, y)) => { game.level.set(x, y, 0); },
-						_ => {},
-					},
-					keyboard::D2 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
-						Some((x, y)) => { game.level.set(x, y, 1); },
-						_ => {},
-					},
-					_ => {}
-				}
-			},
-			_ => {}
-		}
+	for event in gameiter {
+		let ScreenFn(chf) = current_handler;
+		current_handler = chf(&event, &mut game, &mut env, &assets, gl);
 	}
 }

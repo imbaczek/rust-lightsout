@@ -1,5 +1,5 @@
 
-use graphics::*;
+use piston::graphics::*;
 use piston::{
     AssetStore,
 };
