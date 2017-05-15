@@ -1,32 +1,23 @@
 [package]
 
 name = "rust-lightsout"
-version = "0.0.0"
+version = "0.0.1"
 readme = "README.md"
 authors = ["Marek Baczynski <imbaczek@gmail.com>"]
-tags = []
 
 [[bin]]
 
 name = "rust-lightsout"
 path = "src/main.rs"
 
-[dependencies.graphics]
-
-git = "https://github.com/pistondevelopers/rust-graphics"
-
-[dependencies.piston]
-
-git = "https://github.com/pistondevelopers/piston/"
-
-[dependencies.sdl2_game_window]
-
-git = "https://github.com/pistondevelopers/sdl2_game_window"
-
-[dependencies.opengl_graphics]
-
-git = "https://github.com/pistondevelopers/opengl_graphics"
-
-[dependencies.sdl2_mixer]
-
-git = "https://github.com/andelf/rust-sdl2_mixer.git"
+[dependencies]
+piston = "0.32"
+piston_window = "0.65.0"
+pistoncore-sdl2_window = "0.42.0"
+gfx = "0.15.1"
+gfx_core = "*"
+gfx_device_gl = "0.14.0"
+image = "0.13.0"
+piston2d-graphics = "0.21"
+piston2d-opengl_graphics= "0.43.0"
+piston2d-gfx_graphics = "0.39.0"

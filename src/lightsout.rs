@@ -1,34 +1,33 @@
-#[deriving(Show)]
-
 pub trait Level {
-	fn new(x:uint, y:uint) -> Self;
-	fn size(&self) -> (uint, uint);
+	fn size(&self) -> (usize, usize);
 	fn is_solved(&self) -> bool;
-	fn make_move<'a>(&'a mut self, x:uint, y:uint) -> &'a mut Self;
-	fn get(&self, x:uint, y:uint) -> Option<uint>;
-	fn set(&mut self, x:uint, y:uint, v:uint) -> bool;
+	fn make_move<'a>(&'a mut self, x:usize, y:usize) -> &'a mut Level;
+	fn get(&self, x:usize, y:usize) -> Option<usize>;
+	fn set(&mut self, x:usize, y:usize, v:usize) -> bool;
 }
 
 
-#[deriving(Show)]
+#[derive(Debug)]
 pub struct StructLevel {
-	sx: uint,
-	sy: uint,
-	level: Vec<Vec<uint>>,
+	sx: usize,
+	sy: usize,
+	level: Vec<Vec<usize>>,
 }
 
 
-impl Level for StructLevel {
-	fn new(sx:uint, sy:uint) -> StructLevel {
-		let v = Vec::from_elem(sy, Vec::from_elem(sx, 0u));
+impl StructLevel {
+	pub fn new(sx:usize, sy:usize) -> StructLevel {
+		let v = vec![vec![0usize; sx]; sy];
 		StructLevel { sx: sx, sy: sy, level: v }
 	}
+}
 
-	fn size(&self) -> (uint, uint) {
+impl Level for StructLevel {
+	fn size(&self) -> (usize, usize) {
 		(self.sx, self.sy)
 	}
 
-	fn get(&self, x:uint, y:uint) -> Option<uint> {
+	fn get(&self, x:usize, y:usize) -> Option<usize> {
 		if x < self.sx && y < self.sy {
 			Some(self.level[y][x])
 		} else {
@@ -36,10 +35,10 @@ impl Level for StructLevel {
 		}
 	}
 
-	fn set(&mut self, x:uint, y:uint, v:uint) -> bool {
+	fn set(&mut self, x:usize, y:usize, v:usize) -> bool {
 		if x < self.sx && y < self.sy {
 			match v {
-				0..1 => { *self.level.get_mut(y).get_mut(x) = v; true }
+				0...1 => { *self.level.get_mut(y).unwrap().get_mut(x).unwrap() = v; true }
 				_ => false
 			}
 		} else {
@@ -58,19 +57,23 @@ impl Level for StructLevel {
 		true
 	}
 
-	fn make_move<'a>(&'a mut self, x: uint, y: uint) -> &'a mut StructLevel {
+	fn make_move<'a>(&'a mut self, x: usize, y: usize) -> &'a mut Level {
 		if x >= self.sx || y >= self.sy {
 			return self
 		}
-		fn switch(this: &mut StructLevel, x:uint, y:uint) {
+		fn switch(this: &mut StructLevel, x:usize, y:usize) {
 			match this.get(x, y) {
 				Some(1) => this.set(x, y, 0),
 				Some(0) => this.set(x, y, 1),
 				_ => false
 			};
 		}
-		switch(self, x, y-1);
-		switch(self, x-1, y);
+		if y > 0 {
+			switch(self, x, y-1);
+		}
+		if x > 0 {
+			switch(self, x-1, y);
+		}
 		switch(self, x, y);
 		switch(self, x+1, y);
 		switch(self, x, y+1);
@@ -78,30 +81,31 @@ impl Level for StructLevel {
 	}
 }
 
-pub fn solve(level: &StructLevel) -> Option<Vec<(uint, uint)>> {
+pub fn solve(level: &StructLevel) -> Option<Vec<(usize, usize)>> {
 	let (sx, sy) = level.size();
-	let mut mat = Vec::from_elem(sy*sx, Vec::from_elem(sy*sx, 0u));
-	let mut blank:StructLevel = Level::new(sx, sy);
-	let mut expected = Vec::from_elem(sx*sy, 0);
-	for y in range(0, sy) {
-		for x in range(0, sx) {
+	let mut mat = vec![vec![0usize; sy*sx]; sy*sx];  // Vec::from_elem(sy*sx, Vec::from_elem(sy*sx, 0usize));
+	let mut blank = StructLevel::new(sx, sy);
+	let mut expected = vec![0, sx*sy];  // Vec::from_elem(sx*sy, 0);
+	for y in 0 .. sy {
+		for x in 0 .. sx {
 			let row = y*sx + x;
 			blank.make_move(x, y);
-			for by in range(0, sy) {
-				for bx in range(0, sx) {
+			for by in 0 .. sy {
+				for bx in 0 .. sx {
 					let col = by * sx + bx;
-					*mat.get_mut(row).get_mut(col) = blank.get(bx, by).unwrap();
+					*mat.get_mut(row).unwrap().get_mut(col).unwrap()
+						= blank.get(bx, by).unwrap();
 				}
 			}
 			blank.make_move(x, y);
-			*expected.get_mut(row) = level.get(x, y).unwrap() + 1 % 2;
+			*expected.get_mut(row).unwrap() = level.get(x, y).unwrap() + 1 % 2;
 		}
 	}
 	let sol = gauss_jordan_zf2(mat, expected);
 	match sol {
 		Some(s) =>  {
 			let mut ret = Vec::with_capacity(s.len());
-			for i in range(0, s.len()) {
+			for i in 0 .. s.len() {
 				if s[i] != 0 {
 					let x = i % sx;
 					let y = i / sx;
@@ -115,7 +119,7 @@ pub fn solve(level: &StructLevel) -> Option<Vec<(uint, uint)>> {
 }
 
 
-fn gauss_jordan_zf2(mat: Vec<Vec<uint>>, expected: Vec<uint>) -> Option<Vec<uint>> {
+fn gauss_jordan_zf2(mat: Vec<Vec<usize>>, expected: Vec<usize>) -> Option<Vec<usize>> {
 	let mut m = mat.clone();
 	let mut bs = expected.clone();
 	let rows = m.len();
@@ -127,36 +131,36 @@ fn gauss_jordan_zf2(mat: Vec<Vec<uint>>, expected: Vec<uint>) -> Option<Vec<uint
 		return None
 	}
 
-	fn swap(m: &mut Vec<Vec<uint>>, bs: &mut Vec<uint>, i: uint, j:uint) {
+	fn swap(m: &mut Vec<Vec<usize>>, bs: &mut Vec<usize>, i: usize, j:usize) {
 		if i == j {
 			return;
 		}
 		// XXX is cloning optimal here?
-		let tmpi = m.get(i).clone();
-		let tmpj = m.get(j).clone();
-		*m.get_mut(i) = tmpj;
-		*m.get_mut(j) = tmpi;
+		let tmpi = m.get(i).unwrap().clone();
+		let tmpj = m.get(j).unwrap().clone();
+		*m.get_mut(i).unwrap() = tmpj;
+		*m.get_mut(j).unwrap() = tmpi;
 
-		let tmp = *bs.get(i);
-		*bs.get_mut(i) = *bs.get(j);
-		*bs.get_mut(j) = tmp;
+		let tmp = *bs.get(i).unwrap();
+		*bs.get_mut(i).unwrap() = *bs.get(j).unwrap();
+		*bs.get_mut(j).unwrap() = tmp;
 	};
 
-	fn add(m: &mut Vec<Vec<uint>>, bs: &mut Vec<uint>, i: uint, j:uint) {
+	fn add(m: &mut Vec<Vec<usize>>, bs: &mut Vec<usize>, i: usize, j:usize) {
 		if i == j {
-			fail!("trying to add row to itself");
+			panic!("trying to add row to itself");
 		}
-		for x in range(0, m.get(i).len()) {
-			*m.get_mut(i).get_mut(x) += *m.get(j).get(x);
-			*m.get_mut(i).get_mut(x) %= 2;
+		for x in 0 .. m.get(i).unwrap().len() {
+			*m.get_mut(i).unwrap().get_mut(x).unwrap() += *m.get(j).unwrap().get(x).unwrap();
+			*m.get_mut(i).unwrap().get_mut(x).unwrap() %= 2;
 		}
-		*bs.get_mut(i) += *bs.get(j);
-		*bs.get_mut(i) %= 2;
+		*bs.get_mut(i).unwrap() += *bs.get(j).unwrap();
+		*bs.get_mut(i).unwrap() %= 2;
 	};
 
-	for pivot in range(0, rows) {
+	for pivot in 0 .. rows {
 		// 1. find pivot row
-		for i in range(pivot, rows) {
+		for i in pivot .. rows {
 			if m[i][pivot] != 0 {
 				swap(&mut m, &mut bs, i, pivot);
 				break;
@@ -167,7 +171,7 @@ fn gauss_jordan_zf2(mat: Vec<Vec<uint>>, expected: Vec<uint>) -> Option<Vec<uint
 		}
 
 		// 2. add pivot to all rows that have 1 in this column
-		for i in range(0, rows) {
+		for i in 0 .. rows {
 			if i == pivot { continue; }
 			if m[i][pivot] != 0 {
 				add(&mut m, &mut bs, i, pivot);

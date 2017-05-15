@@ -6,26 +6,26 @@ use lightsout::{StructLevel, Level};
 
 pub struct Game {
 	pub level: StructLevel,
-	pub score: int,
+	pub score: isize,
 	time: f64,
 	had_tick: bool,
 }
 
 impl Game {
-	pub fn new(sx: uint, sy: uint) -> Game {
+	pub fn new(sx: usize, sy: usize) -> Game {
 		Game {
 			score: Game::init_score(sx, sy),
 			time: 0.0,
-			level: Level::new(sx, sy),
+			level: StructLevel::new(sx, sy),
 			had_tick: false,
 		}
 	}
 
-	fn init_score(sx: uint, sy: uint) -> int {
-		(2 * sx * sy) as int
+	fn init_score(sx: usize, sy: usize) -> isize {
+		(2 * sx * sy) as isize
 	}
 
-	pub fn add_score(&mut self, ds: int) {
+	pub fn add_score(&mut self, ds: isize) {
 		self.score = std::cmp::max(0, self.score + ds);
 	}
 
@@ -42,9 +42,9 @@ impl Game {
 		self.had_tick
 	}
 
-	pub fn restart(&mut self, sx: uint, sy: uint, score: bool) -> bool {
+	pub fn restart(&mut self, sx: usize, sy: usize, score: bool) -> bool {
 		if sx > 1 && sy> 1 && sx < 10 && sy < 10 {
-			self.level = Level::new(sx, sy);
+			self.level = StructLevel::new(sx, sy);
 			self.score = if score { Game::init_score(sx, sy) } else { 0 } + self.score;
 			self.time = 0.0;
 			return true
@@ -54,12 +54,11 @@ impl Game {
 
 	pub fn make_ai_move(&mut self) {
 		let sol = lightsout::solve(&self.level);
-		println!("solution: {}", sol);
+		println!("solution: {:?}", sol);
 		match sol {
 			Some(moves) => {
 				if moves.len() > 0 {
-					let move = moves[0];
-					let (mx, my) = move;
+					let (mx, my) = moves[0];
 					self.level.make_move(mx, my);
 				}
 			},
@@ -67,10 +66,10 @@ impl Game {
 		};
 	}
 
-	pub fn change_level_size(&mut self, dx: int, dy: int, score: bool) -> bool {
+	pub fn change_level_size(&mut self, dx: isize, dy: isize, score: bool) -> bool {
 		let (sx, sy) = self.level.size();
-		let sx = (sx as int + dx) as uint;
-		let sy = (sy as int + dy) as uint;
+		let sx = (sx as isize + dx) as usize;
+		let sy = (sy as isize + dy) as usize;
 		self.restart(sx, sy, score)
 	}
 }
