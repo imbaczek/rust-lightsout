@@ -11,23 +11,21 @@ extern crate gfx;
 extern crate gfx_device_gl;
 extern crate music;
 
-use std::os;
 use std::path::Path;
 
 use gfx_device_gl::{Resources, CommandBuffer};
 use gfx_graphics::GfxGraphics;
 use graphics::{Image, Context, clear, DrawState, rectangle};
 use opengl_graphics::GlGraphics;
-use piston::*;
 use piston::input::*;
 use piston::input::Input::*;
-use piston_window::{Window, G2dTexture, WindowSettings, Events, EventLoop, EventSettings,
+use piston_window::{G2dTexture, WindowSettings, Events, EventLoop, EventSettings,
                     PistonWindow, Flip, TextureSettings, OpenGL};
 use sdl2::mixer;
 use sdl2_window::Sdl2Window;
 
 
-use lightsout::{StructLevel, Level};
+use lightsout::Level;
 use number_renderer::NumberRenderer;
 use game::Game;
 
@@ -43,19 +41,6 @@ struct Env {
     window_width: f64,
     window_height: f64,
 }
-
-
-#[derive(Copy, Clone, Hash, PartialEq, Eq)]
-struct Music;
-
-#[derive(Copy, Clone, Hash, PartialEq, Eq)]
-enum Sound {
-    Win,
-    Tick,
-    Click,
-    Ai,
-}
-
 
 #[inline(always)]
 fn pt_in_rect(px: f64, py: f64, rx: f64, ry: f64, w: f64, h: f64) -> bool {
@@ -133,7 +118,7 @@ fn render_score(score: isize,
 fn win_screen(window: &mut PistonWindow<Sdl2Window>,
               game: &mut Game,
               assets: &Path,
-              gl: &mut GlGraphics) {
+              _: &mut GlGraphics) {
     let win = G2dTexture::from_path(&mut window.factory,
                                     &assets.join("win.png"),
                                     Flip::None,
@@ -150,7 +135,7 @@ fn win_screen(window: &mut PistonWindow<Sdl2Window>,
 
     while let Some(event) = window.next() {
         match event {
-            Render(args) => {
+            Render(_) => {
                 window.draw_2d(&event, |c, gl| {
                     clear([0., 0., 0., 0.], gl);
                     imgwin.draw(&win, &DrawState::default(), c.transform, gl);
@@ -179,9 +164,9 @@ fn win_screen(window: &mut PistonWindow<Sdl2Window>,
 
 
 fn start_screen(window: &mut PistonWindow<Sdl2Window>,
-                evloop: &Events,
+                _: &Events,
                 assets: &Path,
-                gl: &mut GlGraphics) {
+                _: &mut GlGraphics) {
     let msg = G2dTexture::from_path(&mut window.factory,
                                     &assets.join("start.png"),
                                     Flip::None,
@@ -192,7 +177,7 @@ fn start_screen(window: &mut PistonWindow<Sdl2Window>,
 
     while let Some(event) = window.next() {
         match event {
-            Render(args) => {
+            Render(_) => {
                 window.draw_2d(&event, |c, gl| {
                     clear([0., 0., 0., 0.], gl);
                     img.draw(&msg, &DrawState::default(), c.transform, gl);
@@ -249,7 +234,7 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
 
     while let Some(event) = window.next() {
         match event {
-            Render(args) => {
+            Render(_) => {
                 window.draw_2d(&event, |c, gl| {
                     clear([0.0, 0.0, 0.0, 1.0], gl);
                     render_level(&game.level, &env, &c, gl);
@@ -259,13 +244,13 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
             Update(args) => {
                 game.update(args.dt);
                 if game.ticked() {
-                    channel_all.play(&snd_tick, 0);
+                    channel_all.play(&snd_tick, 0).unwrap();
                 }
 
                 if game.level.is_solved() {
                     let snd_win = mixer::Chunk::from_file(&assets.join("win.ogg")).unwrap();
                     let channel_all = mixer::Channel::all();
-                    channel_all.play(&snd_win, 0);
+                    channel_all.play(&snd_win, 0).unwrap();
 
                     win_screen(window, game, &assets, gl);
 
@@ -278,24 +263,22 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
                 env.mousex = x;
                 env.mousey = y;
             }
-            Press(Button::Mouse(args)) => {
-                println!("{:?} {:?}", args, env);
+            Press(Button::Mouse(_)) => {
                 match mouse_to_level(&game.level, env.mousex, env.mousey) {
                     Some((x, y)) => {
                         game.level.make_move(x, y);
                         game.add_score(-1);
-                        channel_all.play(&snd_click, 0);
+                        channel_all.play(&snd_click, 0).unwrap();
                     }
                     _ => {}
                 }
             }
             Press(Button::Keyboard(key)) => {
-                println!("{:?} {:?}", key, env);
                 match key {
                     Key::Space => {
                         game.make_ai_move();
                         game.add_score(-3);
-                        channel_all.play(&snd_ai, 0);
+                        channel_all.play(&snd_ai, 0).unwrap();
                     }
                     Key::Up => {
                         game.change_level_size(0, -1, false);
@@ -353,20 +336,12 @@ fn main() {
 
     let ref mut gl = GlGraphics::new(opengl);
 
-    let mut env = Env {
-        mousex: 0f64,
-        mousey: 0f64,
-        window_width: window.size().width as f64,
-        window_height: window.size().height as f64,
-    };
-
     init_audio();
 
     let assets = Path::new("bin/assets");
 
     let mut game = Game::new(2usize, 2usize);
 
-    println!("pwd: {:?}", std::env::current_dir());
     start_screen(&mut window, &ev_loop, &assets, gl);
     game_screen(&mut window, &mut game, &assets, gl);
 }

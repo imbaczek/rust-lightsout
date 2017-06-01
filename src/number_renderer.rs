@@ -3,8 +3,6 @@ use std::path::Path;
 use gfx_device_gl::{Resources, CommandBuffer};
 use gfx_graphics::GfxGraphics;
 use graphics::{Context, DrawState, Image};
-use opengl_graphics::GlGraphics;
-use piston::*;
 use piston_window::{G2dTexture, Flip, PistonWindow, TextureSettings};
 use sdl2_window::Sdl2Window;
 
@@ -53,6 +51,7 @@ impl NumberRenderer {
                            DIGITS_WIDTH as f64,
                            DIGITS_HEIGHT as f64])
                 .color([color[0], color[1], color[2], 1.0])
+                .rect([x, y, width, height])
                 .draw(&self.image, &DrawState::default(), c.transform, gl);
             x += width;
         }

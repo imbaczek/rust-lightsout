@@ -100,11 +100,6 @@ pub fn solve(level: &StructLevel) -> Option<Vec<(usize, usize)>> {
             for by in 0..sy {
                 for bx in 0..sx {
                     let col = by * sx + bx;
-                    println!("{} {}", row, col);
-                    println!("{:?} {:?} <- {:?}",
-                             mat.get(row),
-                             mat.get(row).unwrap().get(col),
-                             blank.get(bx, by));
                     *mat.get_mut(row).unwrap().get_mut(col).unwrap() = blank.get(bx, by).unwrap();
                 }
             }
