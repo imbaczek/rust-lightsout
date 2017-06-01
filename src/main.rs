@@ -3,12 +3,13 @@ extern crate piston;
 extern crate piston_window;
 extern crate graphics;
 extern crate opengl_graphics;
-// extern crate sdl2;
+extern crate sdl2;
 extern crate sdl2_window;
-// extern crate sdl2_mixer;
+
 extern crate gfx_graphics;
 extern crate gfx;
 extern crate gfx_device_gl;
+extern crate music;
 
 use std::os;
 use std::path::Path;
@@ -22,6 +23,7 @@ use piston::input::*;
 use piston::input::Input::*;
 use piston_window::{Window, G2dTexture, WindowSettings, Events, EventLoop,
         EventSettings, PistonWindow, Flip, TextureSettings, OpenGL};
+use sdl2::mixer;
 use sdl2_window::Sdl2Window;
 
 
@@ -49,6 +51,17 @@ struct Env {
         window_height: f64,
 }
 
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
+struct Music;
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq)]
+enum Sound {
+	Win,
+	Tick,
+	Click,
+	Ai,
+}
 
 
 #[inline(always)]
@@ -175,7 +188,7 @@ fn start_screen(window: &mut PistonWindow<Sdl2Window>, evloop: &Events, assets: 
 
 fn init_audio() {
         // use directsound if possible. xaudio2 doesn't work for some reason.
-        println!("audio disabled temporarily")
+        // println!("audio disabled temporarily");
         // for i in 0 .. sdl2::audio::get_num_audio_drivers() {
         //      if "directsound" == sdl2::audio::get_audio_driver(i).as_slice() {
         //              sdl2::audio::audio_init("directsound").unwrap();
@@ -183,10 +196,10 @@ fn init_audio() {
         //      }
         // }
         // println!("audio: {}", sdl2::audio::get_current_audio_driver());
-        // println!("inited => {}", sdl2_mixer::init(sdl2_mixer::InitMp3 | sdl2_mixer::InitOgg).bits());
-        // // TODO: 0x8010 is SDL_audio flag
-        // sdl2_mixer::open_audio(sdl2_mixer::DEFAULT_FREQUENCY, 0x8010u16, 2, 1024).unwrap();
-        // sdl2_mixer::allocate_channels(2);
+        let _ = mixer::init(mixer::INIT_OGG);
+        // TODO: 0x8010 is SDL_audio flag
+        mixer::open_audio(mixer::DEFAULT_FREQUENCY, mixer::DEFAULT_FORMAT, mixer::DEFAULT_CHANNELS, 1024).unwrap();
+        mixer::allocate_channels(4);
 }
 
 
@@ -201,10 +214,10 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>, game: &mut Game, assets: &
                 window_height: 600.,
         };
 
-        // let snd_click = sdl2_mixer::Chunk::from_file(&assets.path("click.ogg").unwrap()).unwrap();
-        // let snd_ai = sdl2_mixer::Chunk::from_file(&assets.path("ai.ogg").unwrap()).unwrap();
-        // let snd_tick = sdl2_mixer::Chunk::from_file(&assets.path("tick.ogg").unwrap()).unwrap();
-        // let channel_all = sdl2_mixer::Channel::all();
+        let snd_click = mixer::Chunk::from_file(&assets.join("click.ogg")).unwrap();
+        let snd_ai = mixer::Chunk::from_file(&assets.join("ai.ogg")).unwrap();
+        let snd_tick = mixer::Chunk::from_file(&assets.join("tick.ogg")).unwrap();
+        let channel_all = mixer::Channel::all();
 
         while let Some(event) = window.next() {
                 match event {
@@ -218,13 +231,14 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>, game: &mut Game, assets: &
                         Update(args) => {
                                 game.update(args.dt);
                                 if game.ticked() {
-                                        // channel_all.play(&snd_tick, 0);
+                                        channel_all.play(&snd_tick, 0);
+					// music::play_sound(&Sound::Tick, music::Repeat::Times(1));
                                 }
 
                                 if game.level.is_solved() {
-                                        // let snd_win = sdl2_mixer::Chunk::from_file(&assets.path("win.ogg").unwrap()).unwrap();
-                                        // let channel_all = sdl2_mixer::Channel::all();
-                                        // channel_all.play(&snd_win, 0);
+                                        let snd_win = mixer::Chunk::from_file(&assets.join("win.ogg")).unwrap();
+                                        let channel_all = mixer::Channel::all();
+                                        channel_all.play(&snd_win, 0);
 
                                         win_screen(window, game, &assets, gl);
 
@@ -243,7 +257,8 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>, game: &mut Game, assets: &
                                         Some((x, y)) => {
                                                 game.level.make_move(x, y);
                                                 game.add_score(-1);
-                                                // channel_all.play(&snd_click, 0);
+                                                channel_all.play(&snd_click, 0);
+						// music::play_sound(&Sound::Click, music::Repeat::Times(1));
                                         },
                                         _ => {}
                                 }
@@ -254,7 +269,8 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>, game: &mut Game, assets: &
                                         Key::Space => {
                                                 game.make_ai_move();
                                                 game.add_score(-3);
-                                                // channel_all.play(&snd_ai, 0);
+                                                channel_all.play(&snd_ai, 0);
+						// music::play_sound(&Sound::Ai, music::Repeat::Times(1));
                                         },
                                         Key::Up => { game.change_level_size(0, -1, false); game.add_score(-50); },
                                         Key::Right => { game.change_level_size(1, 0, false); game.add_score(-50); },
@@ -307,7 +323,11 @@ fn main() {
 
         let mut game = Game::new(2usize, 2usize);
 
-        println!("pwd: {:?}", std::env::current_dir());
-        start_screen(&mut window, &ev_loop, &assets, gl);
-        game_screen(&mut window, &mut game, &assets, gl);
+	println!("pwd: {:?}", std::env::current_dir());
+	// music::bind_sound_file(Sound::Click, assets.join("click.ogg"));
+	// music::bind_sound_file(Sound::Tick, assets.join("tick.ogg"));
+	// music::bind_sound_file(Sound::Ai, assets.join("ai.ogg"));
+	// music::bind_sound_file(Sound::Win, assets.join("win.ogg"));
+	start_screen(&mut window, &ev_loop, &assets, gl);
+	game_screen(&mut window, &mut game, &assets, gl);
 }
