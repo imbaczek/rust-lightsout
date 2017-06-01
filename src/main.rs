@@ -36,13 +36,6 @@ mod number_renderer;
 mod game;
 
 
-// workaround for a link failure
-// mod link {
-//      // #[link(name="SDL2_mixer")]
-//      extern {}
-// }
-
-
 #[derive(Debug)]
 struct Env {
     mousex: f64,
@@ -220,17 +213,8 @@ fn start_screen(window: &mut PistonWindow<Sdl2Window>,
 
 
 fn init_audio() {
-    // use directsound if possible. xaudio2 doesn't work for some reason.
-    // println!("audio disabled temporarily");
-    // for i in 0 .. sdl2::audio::get_num_audio_drivers() {
-    //      if "directsound" == sdl2::audio::get_audio_driver(i).as_slice() {
-    //              sdl2::audio::audio_init("directsound").unwrap();
-    //              break;
-    //      }
-    // }
-    // println!("audio: {}", sdl2::audio::get_current_audio_driver());
     let _ = mixer::init(mixer::INIT_OGG);
-    // TODO: 0x8010 is SDL_audio flag
+
     mixer::open_audio(mixer::DEFAULT_FREQUENCY,
                       mixer::DEFAULT_FORMAT,
                       mixer::DEFAULT_CHANNELS,
@@ -276,7 +260,6 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
                 game.update(args.dt);
                 if game.ticked() {
                     channel_all.play(&snd_tick, 0);
-                    // music::play_sound(&Sound::Tick, music::Repeat::Times(1));
                 }
 
                 if game.level.is_solved() {
@@ -302,7 +285,6 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
                         game.level.make_move(x, y);
                         game.add_score(-1);
                         channel_all.play(&snd_click, 0);
-                        // music::play_sound(&Sound::Click, music::Repeat::Times(1));
                     }
                     _ => {}
                 }
@@ -314,7 +296,6 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
                         game.make_ai_move();
                         game.add_score(-3);
                         channel_all.play(&snd_ai, 0);
-                        // music::play_sound(&Sound::Ai, music::Repeat::Times(1));
                     }
                     Key::Up => {
                         game.change_level_size(0, -1, false);
@@ -386,10 +367,6 @@ fn main() {
     let mut game = Game::new(2usize, 2usize);
 
     println!("pwd: {:?}", std::env::current_dir());
-    // music::bind_sound_file(Sound::Click, assets.join("click.ogg"));
-    // music::bind_sound_file(Sound::Tick, assets.join("tick.ogg"));
-    // music::bind_sound_file(Sound::Ai, assets.join("ai.ogg"));
-    // music::bind_sound_file(Sound::Win, assets.join("win.ogg"));
     start_screen(&mut window, &ev_loop, &assets, gl);
     game_screen(&mut window, &mut game, &assets, gl);
 }
