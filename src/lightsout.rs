@@ -92,7 +92,7 @@ pub fn solve(level: &StructLevel) -> Option<Vec<(usize, usize)>> {
     let (sx, sy) = level.size();
     let mut mat = vec![vec![0usize; sy*sx]; sy*sx];
     let mut blank = StructLevel::new(sx, sy);
-    let mut expected = vec![0, sx * sy];
+    let mut expected = vec![0; sx * sy];
     for y in 0..sy {
         for x in 0..sx {
             let row = y * sx + x;
@@ -100,6 +100,11 @@ pub fn solve(level: &StructLevel) -> Option<Vec<(usize, usize)>> {
             for by in 0..sy {
                 for bx in 0..sx {
                     let col = by * sx + bx;
+                    println!("{} {}", row, col);
+                    println!("{:?} {:?} <- {:?}",
+                             mat.get(row),
+                             mat.get(row).unwrap().get(col),
+                             blank.get(bx, by));
                     *mat.get_mut(row).unwrap().get_mut(col).unwrap() = blank.get(bx, by).unwrap();
                 }
             }
