@@ -24,7 +24,7 @@ before_script:
 script:
 - |
   travis-cargo build -- --all-features &&
-  travis-cargo test -- --all-features &&
+  travis-cargo test -- --all-features
 env:
   global:
   - RUST_TEST_THREADS=1
