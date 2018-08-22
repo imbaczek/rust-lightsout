@@ -321,7 +321,7 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
 }
 
 fn main() {
-    let opengl = OpenGL::V4_0;
+    let opengl = OpenGL::V3_3;
 
     let mut window: PistonWindow<Sdl2Window> = WindowSettings::new("Rust Lights Out", (800, 600))
         .fullscreen(false)

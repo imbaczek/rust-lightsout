@@ -1,21 +1,3 @@
-[root]
-name = "rust-lightsout"
-version = "0.0.1"
-dependencies = [
- "gfx 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "gfx_core 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "gfx_device_gl 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "image 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston-music 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston2d-gfx_graphics 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston2d-graphics 0.21.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston2d-opengl_graphics 0.43.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "piston_window 0.66.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "pistoncore-sdl2_window 0.43.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sdl2 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
 [[package]]
 name = "adler32"
 version = "1.0.0"
@@ -815,6 +797,24 @@ dependencies = [
 name = "read_color"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "rust-lightsout"
+version = "0.0.1"
+dependencies = [
+ "gfx 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gfx_core 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gfx_device_gl 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "image 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston 0.32.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston-music 0.21.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-gfx_graphics 0.40.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-graphics 0.21.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston2d-opengl_graphics 0.43.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "piston_window 0.66.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pistoncore-sdl2_window 0.43.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sdl2 0.30.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "rustc-serialize"
