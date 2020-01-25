@@ -1,11 +1,10 @@
 pub trait Level {
     fn size(&self) -> (usize, usize);
     fn is_solved(&self) -> bool;
-    fn make_move<'a>(&'a mut self, x: usize, y: usize) -> &'a mut Level;
+    fn make_move<'a>(&'a mut self, x: usize, y: usize) -> &'a mut dyn Level;
     fn get(&self, x: usize, y: usize) -> Option<usize>;
     fn set(&mut self, x: usize, y: usize, v: usize) -> bool;
 }
-
 
 #[derive(Debug)]
 pub struct StructLevel {
@@ -13,7 +12,6 @@ pub struct StructLevel {
     sy: usize,
     level: Vec<Vec<usize>>,
 }
-
 
 impl StructLevel {
     pub fn new(sx: usize, sy: usize) -> StructLevel {
@@ -42,7 +40,7 @@ impl Level for StructLevel {
     fn set(&mut self, x: usize, y: usize, v: usize) -> bool {
         if x < self.sx && y < self.sy {
             match v {
-                0...1 => {
+                0..=1 => {
                     *self.level.get_mut(y).unwrap().get_mut(x).unwrap() = v;
                     true
                 }
@@ -64,7 +62,7 @@ impl Level for StructLevel {
         true
     }
 
-    fn make_move<'a>(&'a mut self, x: usize, y: usize) -> &'a mut Level {
+    fn make_move<'a>(&'a mut self, x: usize, y: usize) -> &'a mut dyn Level {
         if x >= self.sx || y >= self.sy {
             return self;
         }
@@ -90,7 +88,7 @@ impl Level for StructLevel {
 
 pub fn solve(level: &StructLevel) -> Option<Vec<(usize, usize)>> {
     let (sx, sy) = level.size();
-    let mut mat = vec![vec![0usize; sy*sx]; sy*sx];
+    let mut mat = vec![vec![0usize; sy * sx]; sy * sx];
     let mut blank = StructLevel::new(sx, sy);
     let mut expected = vec![0; sx * sy];
     for y in 0..sy {
@@ -123,7 +121,6 @@ pub fn solve(level: &StructLevel) -> Option<Vec<(usize, usize)>> {
         None => None,
     }
 }
-
 
 fn gauss_jordan_zf2(mat: Vec<Vec<usize>>, expected: Vec<usize>) -> Option<Vec<usize>> {
     let mut m = mat.clone();

@@ -1,38 +1,38 @@
 extern crate gfx_core;
-extern crate piston;
-extern crate piston_window;
 extern crate graphics;
 extern crate opengl_graphics;
+extern crate piston;
+extern crate piston_window;
 extern crate sdl2;
 extern crate sdl2_window;
 
-extern crate gfx_graphics;
 extern crate gfx;
 extern crate gfx_device_gl;
+extern crate gfx_graphics;
 extern crate music;
 
 use std::path::Path;
 
-use gfx_device_gl::{Resources, CommandBuffer};
+use gfx_device_gl::{CommandBuffer, Resources};
 use gfx_graphics::GfxGraphics;
-use graphics::{Image, Context, clear, DrawState, rectangle};
+use graphics::{clear, rectangle, Context, DrawState, Image};
 use opengl_graphics::GlGraphics;
-use piston::input::*;
 use piston::input::Input::*;
-use piston_window::{G2dTexture, WindowSettings, Events, EventLoop, EventSettings,
-                    PistonWindow, Flip, TextureSettings, OpenGL};
+use piston::input::*;
+use piston_window::{
+    EventLoop, EventSettings, Events, Flip, G2dTexture, OpenGL, PistonWindow, TextureSettings,
+    WindowSettings,
+};
 use sdl2::mixer;
 use sdl2_window::Sdl2Window;
 
-
+use game::Game;
 use lightsout::Level;
 use number_renderer::NumberRenderer;
-use game::Game;
 
+mod game;
 mod lightsout;
 mod number_renderer;
-mod game;
-
 
 #[derive(Debug)]
 struct Env {
@@ -47,10 +47,12 @@ fn pt_in_rect(px: f64, py: f64, rx: f64, ry: f64, w: f64, h: f64) -> bool {
     px >= rx && px <= rx + w && py >= ry && py <= ry + h
 }
 
-fn render_level(level: &Level,
-                env: &Env,
-                c: &Context,
-                gl: &mut GfxGraphics<Resources, CommandBuffer>) {
+fn render_level(
+    level: &dyn Level,
+    env: &Env,
+    c: &Context,
+    gl: &mut GfxGraphics<Resources, CommandBuffer>,
+) {
     let (sx, sy) = level.size();
     let margin = 10.0;
     let w = 60.0;
@@ -60,34 +62,40 @@ fn render_level(level: &Level,
             let cx = margin + (margin + w) * (x as f64);
             let cy = margin + (margin + h) * (y as f64);
             if pt_in_rect(env.mousex, env.mousey, cx, cy, w, h) {
-                rectangle([1.0, 1.0, 0.0, 1.0],
-                          [cx - 1.0, cy - 1.0, w + 2.0, h + 2.0],
-                          c.transform,
-                          gl);
+                rectangle(
+                    [1.0, 1.0, 0.0, 1.0],
+                    [cx - 1.0, cy - 1.0, w + 2.0, h + 2.0],
+                    c.transform,
+                    gl,
+                );
             }
-            rectangle(if level.get(x, y).unwrap() == 0 {
-                          [0.4, 0.4, 0.4, 1.0]
-                      } else {
-                          [0.8, 0.8, 0.8, 1.0]
-                      },
-                      [cx, cy, w, h],
-                      c.transform,
-                      gl);
+            rectangle(
+                if level.get(x, y).unwrap() == 0 {
+                    [0.4, 0.4, 0.4, 1.0]
+                } else {
+                    [0.8, 0.8, 0.8, 1.0]
+                },
+                [cx, cy, w, h],
+                c.transform,
+                gl,
+            );
         }
     }
 }
 
-fn mouse_to_level(level: &Level, mx: f64, my: f64) -> Option<(usize, usize)> {
+fn mouse_to_level(level: &dyn Level, mx: f64, my: f64) -> Option<(usize, usize)> {
     let (sx, sy) = level.size();
     let margin = 10.0;
     let w = 60.0;
     let h = 50.0;
-    if !pt_in_rect(mx,
-                   my,
-                   margin,
-                   margin,
-                   margin + (w + margin) * sx as f64,
-                   margin + (h + margin) * sy as f64) {
+    if !pt_in_rect(
+        mx,
+        my,
+        margin,
+        margin,
+        margin + (w + margin) * sx as f64,
+        margin + (h + margin) * sy as f64,
+    ) {
         return None;
     }
 
@@ -104,32 +112,39 @@ fn mouse_to_level(level: &Level, mx: f64, my: f64) -> Option<(usize, usize)> {
     }
 }
 
-fn render_score(score: isize,
-                bg: &G2dTexture,
-                nr: &NumberRenderer,
-                c: &Context,
-                gl: &mut GfxGraphics<Resources, CommandBuffer>) {
+fn render_score(
+    score: isize,
+    bg: &G2dTexture,
+    nr: &NumberRenderer,
+    c: &Context,
+    gl: &mut GfxGraphics<Resources, CommandBuffer>,
+) {
     let img = Image::new().rect([800.0 - 160.0, 0.0, 160.0, 600.0]);
     img.draw(bg, &DrawState::default(), c.transform, gl);
     nr.render(score as u32, 715.0, 100.0, 170.0, [1.0, 1.0, 1.0], c, gl);
 }
 
-
-fn win_screen(window: &mut PistonWindow<Sdl2Window>,
-              game: &mut Game,
-              assets: &Path,
-              _: &mut GlGraphics) {
-    let win = G2dTexture::from_path(&mut window.factory,
-                                    &assets.join("win.png"),
-                                    Flip::None,
-                                    &TextureSettings::new())
-            .unwrap();
+fn win_screen(
+    window: &mut PistonWindow<Sdl2Window>,
+    game: &mut Game,
+    assets: &Path,
+    _: &mut GlGraphics,
+) {
+    let win = G2dTexture::from_path(
+        &mut window.factory,
+        &assets.join("win.png"),
+        Flip::None,
+        &TextureSettings::new(),
+    )
+    .unwrap();
     let imgwin = Image::new().rect([200.0, 175.0, 400.0, 250.0]);
-    let bg = G2dTexture::from_path(&mut window.factory,
-                                   &assets.join("bg.png"),
-                                   Flip::None,
-                                   &TextureSettings::new())
-            .unwrap();
+    let bg = G2dTexture::from_path(
+        &mut window.factory,
+        &assets.join("bg.png"),
+        Flip::None,
+        &TextureSettings::new(),
+    )
+    .unwrap();
     let nr = NumberRenderer::new(window, assets);
     let mut t = 0.0f64;
 
@@ -139,13 +154,15 @@ fn win_screen(window: &mut PistonWindow<Sdl2Window>,
                 window.draw_2d(&event, |c, gl| {
                     clear([0., 0., 0., 0.], gl);
                     imgwin.draw(&win, &DrawState::default(), c.transform, gl);
-                    nr.render(game.score as u32,
-                              400.0,
-                              350.0,
-                              200.0,
-                              [1.0, 1.0, 1.0],
-                              &c,
-                              gl);
+                    nr.render(
+                        game.score as u32,
+                        400.0,
+                        350.0,
+                        200.0,
+                        [1.0, 1.0, 1.0],
+                        &c,
+                        gl,
+                    );
                     render_score(game.score, &bg, &nr, &c, gl);
                 });
             }
@@ -162,16 +179,19 @@ fn win_screen(window: &mut PistonWindow<Sdl2Window>,
     }
 }
 
-
-fn start_screen(window: &mut PistonWindow<Sdl2Window>,
-                _: &Events,
-                assets: &Path,
-                _: &mut GlGraphics) {
-    let msg = G2dTexture::from_path(&mut window.factory,
-                                    &assets.join("start.png"),
-                                    Flip::None,
-                                    &TextureSettings::new())
-            .unwrap();
+fn start_screen(
+    window: &mut PistonWindow<Sdl2Window>,
+    _: &Events,
+    assets: &Path,
+    _: &mut GlGraphics,
+) {
+    let msg = G2dTexture::from_path(
+        &mut window.factory,
+        &assets.join("start.png"),
+        Flip::None,
+        &TextureSettings::new(),
+    )
+    .unwrap();
     let mut t = 0.0f64;
     let img = Image::new().rect([200., 175., 400., 250.]);
 
@@ -196,29 +216,33 @@ fn start_screen(window: &mut PistonWindow<Sdl2Window>,
     }
 }
 
-
 fn init_audio() {
     let _ = mixer::init(mixer::INIT_OGG);
 
-    mixer::open_audio(mixer::DEFAULT_FREQUENCY,
-                      mixer::DEFAULT_FORMAT,
-                      mixer::DEFAULT_CHANNELS,
-                      1024)
-            .unwrap();
+    mixer::open_audio(
+        mixer::DEFAULT_FREQUENCY,
+        mixer::DEFAULT_FORMAT,
+        mixer::DEFAULT_CHANNELS,
+        1024,
+    )
+    .unwrap();
     mixer::allocate_channels(4);
 }
 
-
-fn game_screen(window: &mut PistonWindow<Sdl2Window>,
-               game: &mut Game,
-               assets: &Path,
-               gl: &mut GlGraphics) {
+fn game_screen(
+    window: &mut PistonWindow<Sdl2Window>,
+    game: &mut Game,
+    assets: &Path,
+    gl: &mut GlGraphics,
+) {
     let nr = NumberRenderer::new(window, assets);
-    let bg = G2dTexture::from_path(&mut window.factory,
-                                   &assets.join("bg.png"),
-                                   Flip::None,
-                                   &TextureSettings::new())
-            .unwrap();
+    let bg = G2dTexture::from_path(
+        &mut window.factory,
+        &assets.join("bg.png"),
+        Flip::None,
+        &TextureSettings::new(),
+    )
+    .unwrap();
 
     let mut env = Env {
         mousex: 0.,
@@ -263,58 +287,50 @@ fn game_screen(window: &mut PistonWindow<Sdl2Window>,
                 env.mousex = x;
                 env.mousey = y;
             }
-            Press(Button::Mouse(_)) => {
-                match mouse_to_level(&game.level, env.mousex, env.mousey) {
+            Press(Button::Mouse(_)) => match mouse_to_level(&game.level, env.mousex, env.mousey) {
+                Some((x, y)) => {
+                    game.level.make_move(x, y);
+                    game.add_score(-1);
+                    channel_all.play(&snd_click, 0).unwrap();
+                }
+                _ => {}
+            },
+            Press(Button::Keyboard(key)) => match key {
+                Key::Space => {
+                    game.make_ai_move();
+                    game.add_score(-3);
+                    channel_all.play(&snd_ai, 0).unwrap();
+                }
+                Key::Up => {
+                    game.change_level_size(0, -1, false);
+                    game.add_score(-50);
+                }
+                Key::Right => {
+                    game.change_level_size(1, 0, false);
+                    game.add_score(-50);
+                }
+                Key::Down => {
+                    game.change_level_size(0, 1, false);
+                    game.add_score(-50);
+                }
+                Key::Left => {
+                    game.change_level_size(-1, 0, false);
+                    game.add_score(-50);
+                }
+                Key::D1 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
                     Some((x, y)) => {
-                        game.level.make_move(x, y);
-                        game.add_score(-1);
-                        channel_all.play(&snd_click, 0).unwrap();
+                        game.level.set(x, y, 0);
                     }
                     _ => {}
-                }
-            }
-            Press(Button::Keyboard(key)) => {
-                match key {
-                    Key::Space => {
-                        game.make_ai_move();
-                        game.add_score(-3);
-                        channel_all.play(&snd_ai, 0).unwrap();
-                    }
-                    Key::Up => {
-                        game.change_level_size(0, -1, false);
-                        game.add_score(-50);
-                    }
-                    Key::Right => {
-                        game.change_level_size(1, 0, false);
-                        game.add_score(-50);
-                    }
-                    Key::Down => {
-                        game.change_level_size(0, 1, false);
-                        game.add_score(-50);
-                    }
-                    Key::Left => {
-                        game.change_level_size(-1, 0, false);
-                        game.add_score(-50);
-                    }
-                    Key::D1 => {
-                        match mouse_to_level(&game.level, env.mousex, env.mousey) {
-                            Some((x, y)) => {
-                                game.level.set(x, y, 0);
-                            }
-                            _ => {}
-                        }
-                    }
-                    Key::D2 => {
-                        match mouse_to_level(&game.level, env.mousex, env.mousey) {
-                            Some((x, y)) => {
-                                game.level.set(x, y, 1);
-                            }
-                            _ => {}
-                        }
+                },
+                Key::D2 => match mouse_to_level(&game.level, env.mousex, env.mousey) {
+                    Some((x, y)) => {
+                        game.level.set(x, y, 1);
                     }
                     _ => {}
-                }
-            }
+                },
+                _ => {}
+            },
             _ => {}
         }
     }
